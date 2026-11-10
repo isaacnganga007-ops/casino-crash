@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Casino Admin</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&display=swap">
+<style>
+/* Layout: one column control room; stats strip, live tables, then the activity log */
+:root{--bg:#1A0B0E;--panel:#241216;--panel2:#1a0d10;--gold:#FAC775;--gold-d:#854F0B;--cream:#F4EBD9;--muted:#B4B2A9;--red:#E24B4A;--green:#5DCAA5;--line:rgba(250,199,117,.24);--ink:#111;
+--display:"Limelight",Georgia,serif;--body:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;color-scheme:dark}
+*{box-sizing:border-box;margin:0;padding:0}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--cream);font-family:var(--body);font-size:15px;line-height:1.45;padding-block:20px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:980px;margin:0 auto;display:grid;gap:18px}
+header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:400;font-size:34px;color:var(--gold);letter-spacing:3px;line-height:1}
+h2{font-size:13px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted)}
+button{font:inherit;cursor:pointer;padding:7px 14px;border-radius:8px;border:1px solid var(--gold-d);background:var(--ink);color:var(--gold)}
+button:hover:not(:disabled){background:#22130f}
+button:disabled{opacity:.45;cursor:default}
+button.pri{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:600}
+button.danger{border-color:#8f2a2a;color:#F7A7A7}
+button.danger.arm{background:#A32D2D;color:#fff;border-color:#A32D2D}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+input{font:inherit;font-size:16px;width:100%;padding:9px 12px;border-radius:8px;border:1px solid var(--line);background:#120709;color:var(--cream)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px}
+.login{max-width:380px;margin:8vh auto 0;display:grid;gap:12px}
+.err{color:#F09595;font-size:14px;min-height:20px}
+.note{color:var(--muted);font-size:13px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.stat b{display:block;font-size:26px;font-weight:600;color:var(--gold);font-variant-numeric:tabular-nums;line-height:1.2}
+.stat span{font-size:12px;color:var(--muted);letter-spacing:.5px}
+.tables{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.tbl{display:grid;gap:10px;align-content:start}
+.thead{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+.code{font-family:var(--display);font-size:26px;letter-spacing:6px;color:var(--gold)}
+.pill{font-size:12px;border-radius:10px;padding:1px 9px;border:1px solid var(--line);color:var(--cream);white-space:nowrap}
+.pill.live{border-color:rgba(93,202,165,.5);color:var(--green)}
+.meta{display:flex;gap:6px;flex-wrap:wrap}
+.pl{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(250,199,117,.1)}
+.pl .nm{flex:1;min-width:0;overflow-wrap:anywhere}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex-shrink:0}
+.dot.on{background:var(--green)}
+.pl small{color:var(--muted);font-variant-numeric:tabular-nums}
+.pl button{padding:3px 10px;font-size:13px}
+.empty{color:var(--muted);font-size:14px;padding:6px 0}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{padding:4px 12px;font-size:13px;border-radius:14px}
+.filters button[aria-pressed=true]{background:var(--gold);color:var(--ink);border-color:var(--gold)}
+.loghead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.log{display:grid;max-height:520px;overflow-y:auto}
+.ev{display:grid;grid-template-columns:96px 54px 62px 1fr;gap:8px;padding:6px 2px;border-top:1px solid rgba(250,199,117,.08);font-size:14px;align-items:baseline}
+.ev time,.ev .rc{font-family:var(--mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ev .k{font-size:11px;letter-spacing:.8px;text-transform:uppercase;font-weight:600}
+.ev .tx{min-width:0;overflow-wrap:anywhere}
+.k.join{color:#85B7EB}.k.leave{color:var(--muted)}.k.round{color:var(--gold)}.k.win{color:var(--green)}.k.chat{color:#ED93B1}.k.admin{color:#F09595}.k.close{color:var(--muted)}
+.ev .who{color:var(--gold);font-weight:600;margin-right:6px}
+@media (max-width:560px){.ev{grid-template-columns:86px 1fr;}.ev .rc{grid-column:2}.ev .k{grid-column:1;grid-row:2}.ev .tx{grid-column:2}}
+</style>
+</head>
+<body>
+<main>
+<header><h1>Casino Admin</h1><div id="hdr" hidden style="display:flex;gap:10px;align-items:center"><span class="note" id="upd"></span><button id="out">Sign out</button></div></header>
+
+<section id="off" class="card login" hidden>
+<h2>Admin page is off</h2>
+<p>Set an <b>ADMIN_PASSWORD</b> environment variable on the server, then restart it. On Render: open your service, choose <b>Environment</b>, add <b>ADMIN_PASSWORD</b> with a long password, and save.</p>
+</section>
+
+<form id="login" class="card login" hidden autocomplete="on">
+<h2>Sign in</h2>
+<label for="pw" class="note">Admin password</label>
+<input id="pw" type="password" autocomplete="current-password" required>
+<p class="err" id="lerr" role="alert"></p>
+<button class="pri" type="submit">Sign in</button>
+</form>
+
+<div id="app" hidden style="display:grid;gap:18px">
+<section class="stats" aria-label="Totals since the server started">
+<div class="stat"><b id="s-tables">0</b><span>Tables open now</span></div>
+<div class="stat"><b id="s-players">0</b><span>Players online now</span></div>
+<div class="stat"><b id="s-rounds">0</b><span>Rounds dealt</span></div>
+<div class="stat"><b id="s-wins">0</b><span>Rounds won</span></div>
+<div class="stat"><b id="s-chats">0</b><span>Chat messages</span></div>
+<div class="stat"><b id="s-up">0m</b><span>Server running</span></div>
+</section>
+<input id="q" type="search" placeholder="Search tables, players or messages" aria-label="Search tables, players or messages" autocomplete="off">
+<section style="display:grid;gap:10px"><h2>Live tables <span class="note" id="tcount"></span></h2><div class="tables" id="tables"></div></section>
+<section class="card" style="display:grid;gap:10px">
+<div class="loghead"><h2>Activity</h2><div class="filters" id="filters"></div></div>
+<p class="note">Kept in the server's memory: the newest 1,000 events since it last started. Render restarts free servers when they sleep, which clears this log.</p>
+<div class="log" id="log" aria-live="polite"></div>
+</section>
+</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const KINDS=[['all','All'],['join','Joins'],['round','Rounds'],['win','Wins'],['chat','Chat'],['admin','Admin']];
+let filter='all',events=[],lastN=0,timer=null,lastTables=[],q='';
+const hit=(...xs)=>!q||xs.some(x=>String(x||'').toLowerCase().includes(q));
+const fmtT=t=>new Date(t).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const ago=t=>{const s=Math.max(0,Math.round((Date.now()-t)/1000));return s<60?s+'s':s<3600?Math.floor(s/60)+'m':Math.floor(s/3600)+'h '+Math.floor(s%3600/60)+'m'};
+function el(tag,cls,text){const e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+async function api(path,body){const r=await fetch('/admin/api/'+path,body?{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}:{cache:'no-store'});let j={};try{j=await r.json()}catch(e){}return {status:r.status,j}}
+function show(view){$('off').hidden=view!=='off';$('login').hidden=view!=='login';$('app').hidden=view!=='app';$('hdr').hidden=view!=='app';if(view==='login')setTimeout(()=>$('pw').focus(),0)}
+/* Two-tap confirm inside the page: the first tap arms the button, the second within 4 seconds acts. */
+const arms={};
+function armed(btn,key,label,go){const old=btn.textContent;
+const paint=()=>{const on=arms[key]>Date.now();btn.classList.toggle('arm',on);btn.textContent=on?label:old};paint();
+btn.onclick=()=>{if(arms[key]>Date.now()){delete arms[key];btn.disabled=true;btn.textContent='Working…';go().then(r=>{if(r&&r.status>=400)alertErr(r)}).finally(()=>refresh())}
+ else{arms[key]=Date.now()+4000;paint();setTimeout(()=>{if(btn.isConnected)paint()},4100)}}}
+function alertErr(r){$('upd').textContent=r.status===404?'That player or table is already gone.':'That did not work. Try again.'}
+function renderTables(all){lastTables=all;const box=$('tables');box.textContent='';
+const tables=all.filter(t=>hit(t.code,t.game,t.status,...t.players.map(p=>p.name)));$('tcount').textContent=q?`${tables.length} of ${all.length}`:'';
+if(!tables.length){box.append(el('p','empty',all.length?'No tables match your search.':'No tables are open right now.'));return}
+tables.sort((a,b)=>(b.created||0)-(a.created||0)).forEach(t=>{const c=el('article','card tbl');
+ const h=el('div','thead');h.append(el('span','code',t.code));const close=el('button','danger','Close table');close.setAttribute('aria-label','Close table '+t.code);
+ armed(close,'close:'+t.code,'Tap again to close',()=>api('close',{room:t.code}));h.append(close);c.append(h);
+ const m=el('div','meta');m.append(el('span','pill',t.game),el('span','pill'+(t.status==='Playing'?' live':''),t.status),el('span','pill',t.rounds+' round'+(t.rounds===1?'':'s')));if(t.music)m.append(el('span','pill','Music on'));if(t.created)m.append(el('span','pill','Open '+ago(t.created)));c.append(m);
+ if(!t.players.length)c.append(el('p','empty','Players are connecting…'));
+ t.players.forEach(p=>{const r=el('div','pl');const d=el('span','dot'+(p.online?' on':''));d.title=p.online?'Online':'Reconnecting';
+  r.append(d,el('span','nm',p.name+(p.host?' (host)':'')));if(p.cards!=null)r.append(el('small',null,p.cards+' cards'));
+  const k=el('button','danger','Remove');k.setAttribute('aria-label','Remove '+p.name);armed(k,'kick:'+t.code+':'+p.id,'Tap again to remove',()=>api('kick',{room:t.code,id:p.id}));r.append(k);c.append(r)});
+ box.append(c)})}
+function renderLog(){const box=$('log');box.textContent='';const list=events.filter(e=>(filter==='all'||e.kind===filter||(filter==='join'&&e.kind==='leave'))&&hit(e.room,e.text,e.name)).slice().reverse();
+if(!list.length){box.append(el('p','empty',q?'No events match your search.':filter==='all'?'Nothing has happened yet. Events appear here as people play.':'No events of this kind yet.'));return}
+list.forEach(e=>{const r=el('div','ev');const tm=el('time',null,fmtT(e.t));tm.dateTime=new Date(e.t).toISOString();
+ const tx=el('span','tx');if(e.kind==='chat'&&e.name){tx.append(el('span','who',e.name+':'))}tx.append(document.createTextNode(e.text));
+ r.append(tm,el('span','rc',e.room==='-'?'':e.room),el('span','k '+e.kind,e.kind),tx);box.append(r)})}
+function renderFilters(){const f=$('filters');f.textContent='';KINDS.forEach(([k,l])=>{const b=el('button',null,l);b.setAttribute('aria-pressed',String(filter===k));b.onclick=()=>{filter=k;renderFilters();renderLog()};f.append(b)})}
+async function refresh(){clearTimeout(timer);
+let r;try{r=await api('state?since='+lastN)}catch(e){$('upd').textContent='Server unreachable. Retrying…';timer=setTimeout(refresh,5000);return}
+if(r.status===503)return show('off');
+if(r.status===401){show('login');return}
+show('app');const s=r.j;
+const players=s.tables.reduce((a,t)=>a+t.players.filter(p=>p.online).length,0);
+$('s-tables').textContent=s.tables.length;$('s-players').textContent=players;$('s-rounds').textContent=s.stats.rounds;$('s-wins').textContent=s.stats.wins;$('s-chats').textContent=s.stats.chats;$('s-up').textContent=ago(s.stats.started);
+renderTables(s.tables);
+if(s.log.length){events=events.concat(s.log).slice(-1000);lastN=s.log[s.log.length-1].n;renderLog()}else if(!events.length)renderLog();
+$('upd').textContent='Updated '+fmtT(s.now);
+timer=setTimeout(refresh,3000)}
+$('login').onsubmit=async e=>{e.preventDefault();$('lerr').textContent='';const r=await api('login',{password:$('pw').value}).catch(()=>({status:0}));
+if(r.status===200){$('pw').value='';refresh()}else $('lerr').textContent=r.status===401?'That password is not right. Try again.':r.status===429?'Too many tries. Wait 10 minutes and try again.':'Could not reach the server. Try again.'};
+$('out').onclick=async()=>{await api('logout',{}).catch(()=>{});events=[];lastN=0;clearTimeout(timer);show('login')};
+$('q').oninput=e=>{q=e.target.value.trim().toLowerCase();renderTables(lastTables);renderLog()};
+renderFilters();refresh();
+</script>
+</body>
+</html>
